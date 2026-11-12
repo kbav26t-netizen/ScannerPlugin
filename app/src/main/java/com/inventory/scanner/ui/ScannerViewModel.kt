@@ -13,14 +13,19 @@ data class CountPoint(val x: Float, val y: Float)
 
 class ScannerViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val productDao = ScanDatabase.getInstance(application).productDao()
-    private val countDao = ScanDatabase.getInstance(application).countDao()
+    private val db = ScanDatabase.getInstance(application)
+    private val scanDao = db.scanDao()
+    private val productDao = db.productDao()
+    private val countDao = db.countDao()
 
     private val _scans = MutableStateFlow<List<ScanEntity>>(emptyList())
     val scans: StateFlow<List<ScanEntity>> = _scans.asStateFlow()
 
     private val _products = MutableStateFlow<List<ProductEntity>>(emptyList())
     val products: StateFlow<List<ProductEntity>> = _products.asStateFlow()
+
+    private val _counts = MutableStateFlow<List<CountEntity>>(emptyList())
+    val counts: StateFlow<List<CountEntity>> = _counts.asStateFlow()
 
     private val _countPoints = MutableStateFlow<List<CountPoint>>(emptyList())
     val countPoints: StateFlow<List<CountPoint>> = _countPoints.asStateFlow()
@@ -32,16 +37,17 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             productDao.allProducts().collect { _products.value = it }
         }
-    }
-
-    // --- Распознавание (заглушка для Этапа 3 с ML) ---
-    fun addScan(value: String, format: String) {
         viewModelScope.launch {
-            // В будущем здесь будет логика ML Kit / TFLite
+            countDao.getAll().collect { _counts.value = it }
         }
     }
 
-    // --- Логика подсчёта ---
+    fun addScan(value: String, format: String) {
+        viewModelScope.launch {
+            scanDao.insert(ScanEntity(value = value, format = format))
+        }
+    }
+
     fun startCounting(productId: Long, productName: String) {
         currentCountingProductId = productId
         currentCountingProductName = productName
@@ -71,7 +77,6 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
                 countDao.insert(CountEntity(productId = pid, productName = currentCountingProductName, qty = qty))
             }
         }
-        // Сброс режима
         currentCountingProductId = null
         currentCountingProductName = ""
         _countPoints.value = emptyList()
@@ -86,6 +91,12 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     fun addProduct(name: String, category: String, photos: List<Pair<FloatArray, String>>) {
         viewModelScope.launch {
             productDao.addProduct(name, category, photos)
+        }
+    }
+
+    fun clearAllScans() {
+        viewModelScope.launch {
+            scanDao.clearAll()
         }
     }
 }

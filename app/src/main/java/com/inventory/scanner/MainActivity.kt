@@ -19,6 +19,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -46,6 +47,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.inventory.scanner.data.ScanEntity
+import com.inventory.scanner.ui.CountingOverlay
 import com.inventory.scanner.ui.ScannerViewModel
 
 class MainActivity : ComponentActivity() {
@@ -144,7 +146,7 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private val previewView = PreviewView(this).apply {
+    val previewView = PreviewView(this).apply {
         scaleType = PreviewView.ScaleType.FILL_CENTER
         layoutParams = ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -196,7 +198,7 @@ fun ScannerScreen(viewModel: ScannerViewModel) {
                     IconButton(onClick = { exportScans(context, scans) }) {
                         Icon(Icons.Default.Share, contentDescription = "Экспорт")
                     }
-                    IconButton(onClick = { viewModel.clearAll() }) {
+                    IconButton(onClick = { viewModel.clearAllScans() }) {
                         Icon(Icons.Default.Delete, contentDescription = "Очистить")
                     }
                 }
@@ -208,7 +210,6 @@ fun ScannerScreen(viewModel: ScannerViewModel) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Превью камеры
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -219,7 +220,6 @@ fun ScannerScreen(viewModel: ScannerViewModel) {
                     factory = { (context as MainActivity).previewView },
                     modifier = Modifier.fillMaxSize()
                 )
-                // Рамка сканера
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)

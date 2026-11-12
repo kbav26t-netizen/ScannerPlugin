@@ -1,12 +1,9 @@
 package com.inventory.scanner.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -15,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -39,9 +37,7 @@ fun CountingOverlay(
                 }
             }
     ) {
-        // Сетка для удобства (опционально, можно убрать)
         Canvas(modifier = Modifier.matchParentSize()) {
-            // Рисуем точки
             points.forEachIndexed { index, point ->
                 drawCircle(
                     color = Color.Cyan.copy(alpha = 0.4f),
@@ -53,23 +49,20 @@ fun CountingOverlay(
                     radius = 25f,
                     center = Offset(point.x, point.y)
                 )
-                drawContext.canvas.nativeCanvas.apply {
-                    drawText(
-                        (index + 1).toString(),
-                        point.x,
-                        point.y + 10f,
-                        android.graphics.Paint().apply {
-                            color = android.graphics.Color.BLACK
-                            textSize = 32f
-                            textAlign = android.graphics.Paint.Align.CENTER
-                            isFakeBoldText = true
-                        }
-                    )
-                }
+                drawContext.canvas.nativeCanvas.drawText(
+                    (index + 1).toString(),
+                    point.x,
+                    point.y + 10f,
+                    android.graphics.Paint().apply {
+                        color = android.graphics.Color.BLACK
+                        textSize = 32f
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        isFakeBoldText = true
+                    }
+                )
             }
         }
 
-        // Верхняя панель
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -90,7 +83,6 @@ fun CountingOverlay(
             )
         }
 
-        // Нижняя панель управления
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

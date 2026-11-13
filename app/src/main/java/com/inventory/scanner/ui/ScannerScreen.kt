@@ -45,7 +45,7 @@ import java.util.concurrent.Executors
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ScannerScreen(viewModel: ScannerViewModel, onBack: () -> Unit) {
+fun ScannerScreen(viewModel: ScannerViewModel, onBack: () -> Unit = {}) {
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
     val scans by viewModel.scans.collectAsState()
     val context = LocalContext.current

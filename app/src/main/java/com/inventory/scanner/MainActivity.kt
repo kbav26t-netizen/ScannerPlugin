@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,7 +31,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,20 +47,19 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.inventory.scanner.data.ScanEntity
-import com.inventory.scanner.ui.CountingOverlay
 import com.inventory.scanner.ui.ScannerViewModel
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: ScannerViewModel by viewModels()
-    private lateinit var cameraProvider: ProcessCameraProvider
     private var lastScannedValue: String? = null
+    private var cameraProvider: ProcessCameraProvider? = null
 
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            setupCamera()
+            startCamera()
         } else {
             Toast.makeText(this, "Нет доступа к камере", Toast.LENGTH_LONG).show()
         }
@@ -70,33 +68,34 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-            == PackageManager.PERMISSION_GRANTED
-        ) {
-            setupCamera()
-        } else {
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-        }
-
         setContent {
             MaterialTheme {
                 ScannerScreen(viewModel)
             }
         }
+
+        // Запрашиваем разрешение ПОСЛЕ setContent
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            startCamera()
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
     }
 
-    private fun setupCamera() {
-        val future = ProcessCameraProvider.getInstance(this)
-        future.addListener({
-            cameraProvider = future.get()
+    private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener({
+            cameraProvider = cameraProviderFuture.get()
             bindCameraUseCases()
         }, ContextCompat.getMainExecutor(this))
     }
 
     private fun bindCameraUseCases() {
-        val preview = Preview.Builder().build().also {
-            it.setSurfaceProvider(previewView.surfaceProvider)
-        }
+        val provider = cameraProvider ?: return
+
+        val preview = Preview.Builder().build()
 
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(
@@ -141,18 +140,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-        cameraProvider.unbindAll()
-        cameraProvider.bindToLifecycle(
-            this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis
-        )
-    }
-
-    val previewView = PreviewView(this).apply {
-        scaleType = PreviewView.ScaleType.FILL_CENTER
-        layoutParams = ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
+        try {
+            provider.unbindAll()
+            provider.bindToLifecycle(
+                this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun formatName(format: Int): String = when (format) {
@@ -212,29 +207,22 @@ fun ScannerScreen(viewModel: ScannerViewModel) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Box(
+            // Камера через AndroidView
+            AndroidView(
+                factory = { ctx ->
+                    PreviewView(ctx).apply {
+                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(280.dp)
                     .background(Color.Black)
-            ) {
-                AndroidView(
-                    factory = { (context as MainActivity).previewView },
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(220.dp)
-                        .padding(8.dp)
-                ) {
-                    Text(
-                        text = "▢",
-                        color = Color.White,
-                        fontSize = MaterialTheme.typography.displayLarge.fontSize
-                    )
-                }
-            }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 

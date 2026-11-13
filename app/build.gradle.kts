@@ -72,3 +72,10 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }
+
+android.applicationVariants.all {
+    variant ->
+    variant.outputs.all {
+        outputFileName = "scanner-plugin-${variant.name}.apk"
+    }
+}

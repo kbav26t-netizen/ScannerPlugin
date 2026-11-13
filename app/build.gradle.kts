@@ -33,14 +33,7 @@ android {
         jvmTarget = "17"
     }
     
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
-            isUniversalApk = true
-        }
-    }
+
 }
 
 dependencies {
@@ -62,7 +55,6 @@ dependencies {
 
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
-    implementation("com.google.mediapipe:tasks-vision:0.10.14")
 
     val roomVersion = "2.6.0"
     implementation("androidx.room:room-runtime:$roomVersion")

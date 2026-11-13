@@ -7,6 +7,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.widget.Toast
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -18,8 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -37,20 +38,18 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.inventory.scanner.BarcodeAnalyzer
+import com.inventory.scanner.data.ScanEntity
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.Executors
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ScannerScreen(
-    viewModel: ScannerViewModel,
-    onBack: () -> Unit
-) {
+fun ScannerScreen(viewModel: ScannerViewModel, onBack: () -> Unit) {
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
     val scans by viewModel.scans.collectAsState()
     val context = LocalContext.current
-    
+
     var showHistory by remember { mutableStateOf(false) }
     var torchOn by remember { mutableStateOf(false) }
     var lastScannedCode by remember { mutableStateOf<String?>(null) }
@@ -78,7 +77,7 @@ fun ScannerScreen(
                         Icon(
                             if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
                             contentDescription = "Фонарик",
-                            tint = if (torchOn) MaterialTheme.colorScheme.primary else Color.Gray
+                            tint = if (torchOn) Color.Yellow else Color.White
                         )
                     }
                     IconButton(onClick = { exportScans(context, scans) }) {
@@ -91,10 +90,10 @@ fun ScannerScreen(
             )
             CameraPreview(
                 onBarcodeDetected = { code ->
-                    val currentTime = System.currentTimeMillis()
-                    if (code != lastScannedCode || (currentTime - lastScanTime) > 2000) {
+                    val now = System.currentTimeMillis()
+                    if (code != lastScannedCode || (now - lastScanTime) > 2000) {
                         lastScannedCode = code
-                        lastScanTime = currentTime
+                        lastScanTime = now
                         viewModel.addScan(code, "BARCODE")
                         vibrate(context)
                     }
@@ -102,9 +101,6 @@ fun ScannerScreen(
                 torchOn = torchOn,
                 modifier = Modifier.weight(1f)
             )
-            LaunchedEffect(torchOn) {
-                // Фонарик управляется через cameraControl в CameraPreview
-            }
             Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Последний штрих-код:", style = MaterialTheme.typography.titleMedium)
@@ -117,7 +113,7 @@ fun ScannerScreen(
                     )
                     if (lastScan != null) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Формат: ${lastScan.format}", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                        Text("Формат: ${lastScan.format} • Кол-во: ${lastScan.quantity}", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                         Text("Всего отсканировано: ${scans.size}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     }
                 }
@@ -132,10 +128,55 @@ fun ScannerScreen(
     }
 }
 
+@Composable
+fun CameraPreview(
+    onBarcodeDetected: (String) -> Unit,
+    torchOn: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val previewView = remember { PreviewView(context) }
+    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    val analyzerExecutor = remember { Executors.newSingleThreadExecutor() }
+    val cameraState = remember { mutableStateOf<Camera?>(null) }
+
+    DisposableEffect(lifecycleOwner) {
+        val cameraProvider = cameraProviderFuture.get()
+        val preview = Preview.Builder().build().also {
+            it.setSurfaceProvider(previewView.surfaceProvider)
+        }
+        val imageAnalysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also {
+                it.setAnalyzer(analyzerExecutor, BarcodeAnalyzer(onBarcodeDetected))
+            }
+        try {
+            cameraProvider.unbindAll()
+            cameraState.value = cameraProvider.bindToLifecycle(
+                lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        onDispose {
+            cameraProvider.unbindAll()
+            analyzerExecutor.shutdown()
+        }
+    }
+
+    LaunchedEffect(torchOn, cameraState.value) {
+        cameraState.value?.cameraControl?.enableTorch(torchOn)
+    }
+
+    AndroidView(factory = { previewView }, modifier = modifier.fillMaxWidth())
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryView(
-    scans: List<com.inventory.scanner.data.ScanEntity>,
+    scans: List<ScanEntity>,
     onDelete: (Long) -> Unit,
     onClearAll: () -> Unit,
     onBack: () -> Unit,
@@ -171,7 +212,11 @@ fun HistoryView(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(scans, key = { it.id }) { record ->
-                    ScanRecordCard(record = record, onDelete = { onDelete(record.id) }, onQuantityChange = { newQty -> onQuantityChange(record.id, newQty) })
+                    ScanRecordCard(
+                        record = record,
+                        onDelete = { onDelete(record.id) },
+                        onQuantityChange = { newQty -> onQuantityChange(record.id, newQty) }
+                    )
                 }
             }
         }
@@ -179,64 +224,27 @@ fun HistoryView(
 }
 
 @Composable
-fun ScanRecordCard(
-    record: com.inventory.scanner.data.ScanEntity,
-    onDelete: () -> Unit,
-    onQuantityChange: (Int) -> Unit
-) {
+fun ScanRecordCard(record: ScanEntity, onDelete: () -> Unit, onQuantityChange: (Int) -> Unit) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()) }
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text("${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { if (record.quantity > 1) onQuantityChange(record.quantity - 1) }, modifier = Modifier.size(36.dp)) {
-                        Text("−", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Text(
-                        "${record.quantity}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    IconButton(onClick = { onQuantityChange(record.quantity + 1) }, modifier = Modifier.size(36.dp)) {
-                        Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Clear, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                    }
-                }
+        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text("${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            IconButton(onClick = { if (record.quantity > 1) onQuantityChange(record.quantity - 1) }, modifier = Modifier.size(36.dp)) {
+                Text("−", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            }
+            Text("${record.quantity}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(32.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            IconButton(onClick = { onQuantityChange(record.quantity + 1) }, modifier = Modifier.size(36.dp)) {
+                Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Clear, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
             }
         }
     }
-}
-
-@Composable
-fun CameraPreview(onBarcodeDetected: (String) -> Unit, torchOn: Boolean = false, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val previewView = remember { PreviewView(context) }
-    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
-    val analyzerExecutor = remember { Executors.newSingleThreadExecutor() }
-
-    DisposableEffect(lifecycleOwner) {
-        val cameraProvider = cameraProviderFuture.get()
-        val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-        val imageAnalysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().also {
-            it.setAnalyzer(analyzerExecutor, BarcodeAnalyzer(onBarcodeDetected))
-        }
-        try {
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis)
-        } catch (e: Exception) { e.printStackTrace() }
-        onDispose { cameraProvider.unbindAll(); analyzerExecutor.shutdown() }
-    }
-    AndroidView(factory = { previewView }, modifier = modifier.fillMaxWidth())
 }
 
 private fun vibrate(context: android.content.Context) {
@@ -252,13 +260,13 @@ private fun vibrate(context: android.content.Context) {
     }
 }
 
-private fun exportScans(context: android.content.Context, scans: List<com.inventory.scanner.data.ScanEntity>) {
+private fun exportScans(context: android.content.Context, scans: List<ScanEntity>) {
     if (scans.isEmpty()) {
         Toast.makeText(context, "Нечего экспортировать", Toast.LENGTH_SHORT).show()
         return
     }
     val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
-    val text = scans.joinToString("\n") { "${it.value} (${it.format}) - ${dateFormat.format(java.util.Date(it.timestamp))}" }
+    val text = scans.joinToString("\n") { "${it.value}\t${it.quantity}\t${it.format}\t${dateFormat.format(java.util.Date(it.timestamp))}" }
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)

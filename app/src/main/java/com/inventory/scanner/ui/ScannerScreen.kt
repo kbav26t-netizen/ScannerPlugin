@@ -77,7 +77,7 @@ fun ScannerScreen(viewModel: ScannerViewModel, onBack: () -> Unit = {}) {
                         Icon(
                             if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
                             contentDescription = "Фонарик",
-                            tint = if (torchOn) Color.Yellow else Color.White
+                            tint = if (torchOn) Color.Yellow else Color.Black
                         )
                     }
                     IconButton(onClick = { exportScans(context, scans) }) {

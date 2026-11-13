@@ -48,6 +48,10 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun deleteScan(id: Long) {
+        viewModelScope.launch { scanDao.delete(id) }
+    }
+
     fun clearAllScans() {
         viewModelScope.launch { scanDao.clearAll() }
     }

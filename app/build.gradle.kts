@@ -62,6 +62,7 @@ dependencies {
 
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    implementation("com.google.mediapipe:tasks-vision:0.10.14")
 
     val roomVersion = "2.6.0"
     implementation("androidx.room:room-runtime:$roomVersion")

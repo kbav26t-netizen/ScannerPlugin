@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -60,7 +61,8 @@ fun ScannerScreen(
             scans = scans,
             onDelete = { viewModel.deleteScan(it) },
             onClearAll = { viewModel.clearAllScans() },
-            onBack = { showHistory = false }
+            onBack = { showHistory = false },
+            onQuantityChange = { id, qty -> viewModel.updateQuantity(id, qty) }
         )
     } else if (cameraPermissionState.status.isGranted) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -136,7 +138,8 @@ fun HistoryView(
     scans: List<com.inventory.scanner.data.ScanEntity>,
     onDelete: (Long) -> Unit,
     onClearAll: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onQuantityChange: (Long, Int) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -168,7 +171,7 @@ fun HistoryView(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(scans, key = { it.id }) { record ->
-                    ScanRecordCard(record = record, onDelete = { onDelete(record.id) })
+                    ScanRecordCard(record = record, onDelete = { onDelete(record.id) }, onQuantityChange = { newQty -> onQuantityChange(record.id, newQty) })
                 }
             }
         }
@@ -176,17 +179,38 @@ fun HistoryView(
 }
 
 @Composable
-fun ScanRecordCard(record: com.inventory.scanner.data.ScanEntity, onDelete: () -> Unit) {
+fun ScanRecordCard(
+    record: com.inventory.scanner.data.ScanEntity,
+    onDelete: () -> Unit,
+    onQuantityChange: (Int) -> Unit
+) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()) }
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Clear, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error)
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { if (record.quantity > 1) onQuantityChange(record.quantity - 1) }, modifier = Modifier.size(36.dp)) {
+                        Text("−", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        "${record.quantity}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    IconButton(onClick = { onQuantityChange(record.quantity + 1) }, modifier = Modifier.size(36.dp)) {
+                        Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Clear, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                    }
+                }
             }
         }
     }

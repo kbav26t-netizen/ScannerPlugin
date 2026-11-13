@@ -3,6 +3,7 @@ package com.inventory.scanner.data
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -18,4 +19,10 @@ interface ScanDao {
 
     @Query("DELETE FROM scans")
     suspend fun clearAll()
+
+    @Update
+    suspend fun update(scan: ScanEntity)
+
+    @Query("UPDATE scans SET quantity = :quantity WHERE id = :id")
+    suspend fun updateQuantity(id: Long, quantity: Int)
 }

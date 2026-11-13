@@ -48,6 +48,10 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun updateQuantity(id: Long, quantity: Int) {
+        viewModelScope.launch { scanDao.updateQuantity(id, quantity) }
+    }
+
     fun deleteScan(id: Long) {
         viewModelScope.launch { scanDao.delete(id) }
     }

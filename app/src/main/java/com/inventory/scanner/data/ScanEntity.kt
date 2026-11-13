@@ -8,5 +8,6 @@ data class ScanEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val value: String,
     val format: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val quantity: Int = 1
 )

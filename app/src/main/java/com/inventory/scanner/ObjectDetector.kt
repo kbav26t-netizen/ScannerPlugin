@@ -2,6 +2,7 @@ package com.inventory.scanner
 
 import android.content.Context
 import android.graphics.Bitmap
+import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.objectdetector.ObjectDetector as MPObjectDetector
@@ -27,7 +28,8 @@ class ObjectDetector(
     }
 
     fun detect(bitmap: Bitmap, timestampMs: Long) {
-        mpObjectDetector?.detectAsync(bitmap, timestampMs)
+        val mpImage = BitmapImageBuilder(bitmap).build()
+        mpObjectDetector?.detectAsync(mpImage, timestampMs)
     }
 
     fun close() {

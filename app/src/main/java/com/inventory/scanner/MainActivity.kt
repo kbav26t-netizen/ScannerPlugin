@@ -267,7 +267,7 @@ fun ScannerScreen(viewModel: ScannerViewModel) {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(scans) { scan ->
                         ScanRow(scan)
-                        HorizontalDivider()
+                        Divider()
                     }
                 }
             }

@@ -3,7 +3,10 @@ package com.inventory.scanner.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.inventory.scanner.data.*
+import com.inventory.scanner.data.CountEntity
+import com.inventory.scanner.data.ProductEntity
+import com.inventory.scanner.data.ScanDatabase
+import com.inventory.scanner.data.ScanEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,9 +17,9 @@ data class CountPoint(val x: Float, val y: Float)
 class ScannerViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = ScanDatabase.getInstance(application)
+    val productDao = db.productDao()
+    val countDao = db.countDao()
     private val scanDao = db.scanDao()
-    private val productDao = db.productDao()
-    private val countDao = db.countDao()
 
     private val _scans = MutableStateFlow<List<ScanEntity>>(emptyList())
     val scans: StateFlow<List<ScanEntity>> = _scans.asStateFlow()
@@ -35,10 +38,10 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         viewModelScope.launch {
-            productDao.allProducts().collect { _products.value = it }
+            productDao.allProducts().collect { list -> _products.value = list }
         }
         viewModelScope.launch {
-            countDao.getAll().collect { _counts.value = it }
+            countDao.getAll().collect { list -> _counts.value = list }
         }
     }
 
@@ -95,8 +98,6 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun clearAllScans() {
-        viewModelScope.launch {
-            scanDao.clearAll()
-        }
+        viewModelScope.launch { scanDao.clearAll() }
     }
 }

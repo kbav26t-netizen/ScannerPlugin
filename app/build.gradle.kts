@@ -41,8 +41,12 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    
 
+    applicationVariants.configureEach {
+        outputs.configureEach {
+            (this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl)?.outputFileName = "scanner-plugin-${name}.apk"
+        }
+    }
 }
 
 dependencies {
@@ -71,11 +75,4 @@ dependencies {
     ksp("androidx.room:room-compiler:$roomVersion")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-}
-
-android.applicationVariants.all {
-    variant ->
-    variant.outputs.all {
-        outputFileName = "scanner-plugin-${variant.name}.apk"
-    }
 }

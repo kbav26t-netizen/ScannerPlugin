@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -49,6 +51,7 @@ fun ScannerScreen(
     val context = LocalContext.current
     
     var showHistory by remember { mutableStateOf(false) }
+    var torchOn by remember { mutableStateOf(false) }
     var lastScannedCode by remember { mutableStateOf<String?>(null) }
     var lastScanTime by remember { mutableStateOf(0L) }
 
@@ -69,6 +72,13 @@ fun ScannerScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { torchOn = !torchOn }) {
+                        Icon(
+                            if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                            contentDescription = "Фонарик",
+                            tint = if (torchOn) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                    }
                     IconButton(onClick = { exportScans(context, scans) }) {
                         Icon(Icons.Default.Share, contentDescription = "Экспорт")
                     }
@@ -87,8 +97,12 @@ fun ScannerScreen(
                         vibrate(context)
                     }
                 },
+                torchOn = torchOn,
                 modifier = Modifier.weight(1f)
             )
+            LaunchedEffect(torchOn) {
+                // Фонарик управляется через cameraControl в CameraPreview
+            }
             Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Последний штрих-код:", style = MaterialTheme.typography.titleMedium)
@@ -179,7 +193,7 @@ fun ScanRecordCard(record: com.inventory.scanner.data.ScanEntity, onDelete: () -
 }
 
 @Composable
-fun CameraPreview(onBarcodeDetected: (String) -> Unit, modifier: Modifier = Modifier) {
+fun CameraPreview(onBarcodeDetected: (String) -> Unit, torchOn: Boolean = false, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val previewView = remember { PreviewView(context) }

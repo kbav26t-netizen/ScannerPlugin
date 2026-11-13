@@ -30,13 +30,10 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     private val _counts = MutableStateFlow<List<CountEntity>>(emptyList())
     val counts: StateFlow<List<CountEntity>> = _counts.asStateFlow()
 
-    private val _countPoints = MutableStateFlow<List<CountPoint>>(emptyList())
-    val countPoints: StateFlow<List<CountPoint>> = _countPoints.asStateFlow()
-
-    private var currentCountingProductId: Long? = null
-    private var currentCountingProductName: String = ""
-
     init {
+        viewModelScope.launch {
+            scanDao.getAll().collect { list -> _scans.value = list }
+        }
         viewModelScope.launch {
             productDao.allProducts().collect { list -> _products.value = list }
         }
@@ -51,53 +48,12 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun startCounting(productId: Long, productName: String) {
-        currentCountingProductId = productId
-        currentCountingProductName = productName
-        _countPoints.value = emptyList()
-    }
-
-    fun addPoint(x: Float, y: Float) {
-        _countPoints.value = _countPoints.value + CountPoint(x, y)
-    }
-
-    fun undoLastPoint() {
-        val current = _countPoints.value
-        if (current.isNotEmpty()) {
-            _countPoints.value = current.dropLast(1)
-        }
-    }
-
-    fun clearPoints() {
-        _countPoints.value = emptyList()
-    }
-
-    fun saveCount() {
-        val pid = currentCountingProductId ?: return
-        val qty = _countPoints.value.size
-        if (qty > 0) {
-            viewModelScope.launch {
-                countDao.insert(CountEntity(productId = pid, productName = currentCountingProductName, qty = qty))
-            }
-        }
-        currentCountingProductId = null
-        currentCountingProductName = ""
-        _countPoints.value = emptyList()
-    }
-
-    fun cancelCounting() {
-        currentCountingProductId = null
-        currentCountingProductName = ""
-        _countPoints.value = emptyList()
-    }
-
-    fun addProduct(name: String, category: String, photos: List<Pair<FloatArray, String>>) {
-        viewModelScope.launch {
-            productDao.addProduct(name, category, photos)
-        }
-    }
-
     fun clearAllScans() {
         viewModelScope.launch { scanDao.clearAll() }
     }
+    
+    // Заглушки для будущего Этапа 3 (распознавание)
+    fun startCounting(productId: Long, productName: String) {}
+    fun addPoint(x: Float, y: Float) {}
+    fun addProduct(name: String, category: String, photos: List<Pair<FloatArray, String>>) {}
 }

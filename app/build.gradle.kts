@@ -12,8 +12,17 @@ android {
         applicationId = "com.inventory.scanner"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 6
+        versionName = "1.6"
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
     }
 
     buildFeatures {

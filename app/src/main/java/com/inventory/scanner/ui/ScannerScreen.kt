@@ -141,7 +141,7 @@ fun CameraPreview(
     }
 
     LaunchedEffect(torchOn, cameraState.value) {
-        cameraState.value?.cameraControl?.enableTorch = torchOn
+        cameraState.value?.cameraControl?.enableTorch(torchOn)
     }
 
     AndroidView(

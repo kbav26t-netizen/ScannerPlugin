@@ -1,10 +1,11 @@
 package com.inventory.scanner.ui
 
 import android.Manifest
+import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.os.Build
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -13,8 +14,8 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.FlashlightOff
+import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,27 +25,34 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.inventory.scanner.BarcodeAnalyzer
-import com.inventory.scanner.R
 import java.util.concurrent.Executors
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ScannerScreen(viewModel: ScannerViewModel) {
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
-    val scans by viewModel.scans.collectAsState()
+    val scans by viewModel.scans.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var torchOn by remember { mutableStateOf(false) }
 
     if (cameraPermissionState.status.isGranted) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopAppBar(
                 title = { Text("Сканер штрихкодов") },
                 actions = {
+                    IconButton(onClick = { torchOn = !torchOn }) {
+                        Icon(
+                            if (torchOn) Icons.Default.FlashlightOn else Icons.Default.FlashlightOff,
+                            contentDescription = "Фонарик",
+                            tint = if (torchOn) Color.Yellow else Color.Unspecified
+                        )
+                    }
                     IconButton(onClick = { viewModel.clearAllScans() }) {
                         Icon(Icons.Default.Clear, contentDescription = "Очистить")
                     }
@@ -55,6 +63,7 @@ fun ScannerScreen(viewModel: ScannerViewModel) {
                     viewModel.addScan(code, "BARCODE")
                     vibrate(context)
                 },
+                torchOn = torchOn,
                 modifier = Modifier.weight(1f)
             )
             Card(
@@ -94,6 +103,7 @@ fun ScannerScreen(viewModel: ScannerViewModel) {
 @Composable
 fun CameraPreview(
     onBarcodeDetected: (String) -> Unit,
+    torchOn: Boolean,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -101,6 +111,7 @@ fun CameraPreview(
     val previewView = remember { PreviewView(context) }
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     val analyzerExecutor = remember { Executors.newSingleThreadExecutor() }
+    val cameraState = remember { mutableStateOf<Camera?>(null) }
 
     DisposableEffect(lifecycleOwner) {
         val cameraProvider = cameraProviderFuture.get()
@@ -116,14 +127,21 @@ fun CameraPreview(
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
         try {
             cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageAnalysis)
+            cameraState.value = cameraProvider.bindToLifecycle(
+                lifecycleOwner, cameraSelector, preview, imageAnalysis
+            )
         } catch (e: Exception) {
             e.printStackTrace()
         }
         onDispose {
             cameraProvider.unbindAll()
             analyzerExecutor.shutdown()
+            cameraState.value = null
         }
+    }
+
+    LaunchedEffect(torchOn, cameraState.value) {
+        cameraState.value?.cameraControl?.enableTorch = torchOn
     }
 
     AndroidView(

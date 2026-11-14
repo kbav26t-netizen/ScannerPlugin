@@ -52,6 +52,10 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { scanDao.updateQuantity(id, quantity) }
     }
 
+    fun updateUserName(id: Long, userName: String) {
+        viewModelScope.launch { scanDao.updateUserName(id, userName) }
+    }
+
     fun deleteScan(id: Long) {
         viewModelScope.launch { scanDao.delete(id) }
     }
@@ -59,7 +63,7 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     fun clearAllScans() {
         viewModelScope.launch { scanDao.clearAll() }
     }
-    
+
     // Заглушки для будущего Этапа 3 (распознавание)
     fun startCounting(productId: Long, productName: String) {}
     fun addPoint(x: Float, y: Float) {}

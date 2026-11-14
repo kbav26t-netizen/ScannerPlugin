@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 class Converters {
     @TypeConverter
@@ -22,9 +24,15 @@ class Converters {
     }
 }
 
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE scans ADD COLUMN userName TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 @Database(
     entities = [ScanEntity::class, ProductEntity::class, PhotoEntity::class, CountEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -39,7 +47,10 @@ abstract class ScanDatabase : RoomDatabase() {
             INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
                     context.applicationContext, ScanDatabase::class.java, "scanner.db"
-                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
+                )
+                .addMigrations(MIGRATION_3_4)
+                .fallbackToDestructiveMigration()
+                .build().also { INSTANCE = it }
             }
     }
 }

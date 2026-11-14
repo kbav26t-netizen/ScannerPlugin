@@ -31,7 +31,7 @@ class HistoryProvider : ContentProvider() {
         val database = ScanDatabase.getInstance(context)
         val scans = database.scanDao().getAllSync()
 
-        val cursor = MatrixCursor(arrayOf("_id", "barcode", "quantity", "format", "timestamp"))
+        val cursor = MatrixCursor(arrayOf("_id", "barcode", "quantity", "format", "timestamp", "user_name"))
         scans.forEachIndexed { index, scan ->
             cursor.newRow()
                 .add(scan.id)
@@ -39,6 +39,7 @@ class HistoryProvider : ContentProvider() {
                 .add(scan.quantity)
                 .add(scan.format)
                 .add(scan.timestamp)
+                .add(scan.userName)
         }
         return cursor
     }

@@ -9,5 +9,6 @@ data class ScanEntity(
     val value: String,
     val format: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val quantity: Int = 1
+    val quantity: Int = 1,
+    val userName: String = ""
 )

@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.History
@@ -61,7 +62,8 @@ fun ScannerScreen(viewModel: ScannerViewModel, onBack: () -> Unit = {}) {
             onDelete = { viewModel.deleteScan(it) },
             onClearAll = { viewModel.clearAllScans() },
             onBack = { showHistory = false },
-            onQuantityChange = { id, qty -> viewModel.updateQuantity(id, qty) }
+            onQuantityChange = { id, qty -> viewModel.updateQuantity(id, qty) },
+            onUserNameChange = { id, name -> viewModel.updateUserName(id, name) }
         )
     } else if (cameraPermissionState.status.isGranted) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -113,7 +115,8 @@ fun ScannerScreen(viewModel: ScannerViewModel, onBack: () -> Unit = {}) {
                     )
                     if (lastScan != null) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Формат: ${lastScan.format} • Кол-во: ${lastScan.quantity}", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                        val nameText = if (lastScan.userName.isNotBlank()) lastScan.userName else "${lastScan.format} • Кол-во: ${lastScan.quantity}"
+                        Text(nameText, style = MaterialTheme.typography.bodyMedium, color = if (lastScan.userName.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray)
                         Text("Всего отсканировано: ${scans.size}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     }
                 }
@@ -180,7 +183,8 @@ fun HistoryView(
     onDelete: (Long) -> Unit,
     onClearAll: () -> Unit,
     onBack: () -> Unit,
-    onQuantityChange: (Long, Int) -> Unit
+    onQuantityChange: (Long, Int) -> Unit,
+    onUserNameChange: (Long, String) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -215,7 +219,8 @@ fun HistoryView(
                     ScanRecordCard(
                         record = record,
                         onDelete = { onDelete(record.id) },
-                        onQuantityChange = { newQty -> onQuantityChange(record.id, newQty) }
+                        onQuantityChange = { newQty -> onQuantityChange(record.id, newQty) },
+                        onUserNameChange = { id, name -> onUserNameChange(id, name) }
                     )
                 }
             }
@@ -224,15 +229,61 @@ fun HistoryView(
 }
 
 @Composable
-fun ScanRecordCard(record: ScanEntity, onDelete: () -> Unit, onQuantityChange: (Int) -> Unit) {
+fun ScanRecordCard(
+    record: ScanEntity,
+    onDelete: () -> Unit,
+    onQuantityChange: (Int) -> Unit,
+    onUserNameChange: (Long, String) -> Unit
+) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editedName by remember { mutableStateOf(record.userName) }
+
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Наименование товара") },
+            text = {
+                OutlinedTextField(
+                    value = editedName,
+                    onValueChange = { editedName = it },
+                    label = { Text("Введите наименование") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onUserNameChange(record.id, editedName)
+                    showEditDialog = false
+                }) { Text("Сохранить") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) { Text("Отмена") }
+            }
+        )
+    }
+
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text("${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val displayText = if (record.userName.isNotBlank()) {
+                        record.userName
+                    } else {
+                        "${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}"
+                    }
+                    val textColor = if (record.userName.isNotBlank()) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Text(displayText, style = MaterialTheme.typography.bodySmall, color = textColor)
+                }
+                // Кнопка редактирования наименования
+                IconButton(onClick = { showEditDialog = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Edit, contentDescription = "Изменить наименование", tint = MaterialTheme.colorScheme.primary)
                 }
                 IconButton(onClick = { if (record.quantity > 1) onQuantityChange(record.quantity - 1) }, modifier = Modifier.size(36.dp)) {
                     Text("−", fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -270,7 +321,10 @@ private fun exportScans(context: android.content.Context, scans: List<ScanEntity
         return
     }
     val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
-    val text = scans.joinToString("\n") { "${it.value}\t${it.quantity}\t${it.format}\t${dateFormat.format(java.util.Date(it.timestamp))}" }
+    val text = scans.joinToString("\n") { 
+        val name = if (it.userName.isNotBlank()) " (${it.userName})" else ""
+        "${it.value}$name\t${it.quantity}\t${it.format}\t${dateFormat.format(java.util.Date(it.timestamp))}" 
+    }
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)

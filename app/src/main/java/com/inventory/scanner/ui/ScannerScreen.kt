@@ -227,21 +227,25 @@ fun HistoryView(
 fun ScanRecordCard(record: ScanEntity, onDelete: () -> Unit, onQuantityChange: (Int) -> Unit) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()) }
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text("${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = { if (record.quantity > 1) onQuantityChange(record.quantity - 1) }, modifier = Modifier.size(36.dp)) {
+                    Text("−", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                }
+                Text("${record.quantity}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(32.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                IconButton(onClick = { onQuantityChange(record.quantity + 1) }, modifier = Modifier.size(36.dp)) {
+                    Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                }
             }
-            IconButton(onClick = { if (record.quantity > 1) onQuantityChange(record.quantity - 1) }, modifier = Modifier.size(36.dp)) {
-                Text("−", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            }
-            Text("${record.quantity}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(32.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            IconButton(onClick = { onQuantityChange(record.quantity + 1) }, modifier = Modifier.size(36.dp)) {
-                Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Clear, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Clear, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                }
             }
         }
     }

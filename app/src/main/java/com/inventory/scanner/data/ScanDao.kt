@@ -14,6 +14,9 @@ interface ScanDao {
     @Query("SELECT * FROM scans ORDER BY timestamp DESC")
     fun getAll(): Flow<List<ScanEntity>>
 
+    @Query("SELECT * FROM scans ORDER BY timestamp DESC")
+    fun getAllSync(): List<ScanEntity>
+
     @Query("DELETE FROM scans WHERE id = :id")
     suspend fun delete(id: Long)
 

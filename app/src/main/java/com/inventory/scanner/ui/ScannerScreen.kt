@@ -252,10 +252,7 @@ fun ScanRecordCard(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    onUserNameChange(record.id, editedName)
-                    showEditDialog = false
-                }) { Text("Сохранить") }
+                TextButton(onClick = { onUserNameChange(record.id, editedName); showEditDialog = false }) { Text("Сохранить") }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) { Text("Отмена") }
@@ -265,25 +262,20 @@ fun ScanRecordCard(
 
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(2.dp))
-                    val displayText = if (record.userName.isNotBlank()) {
-                        record.userName
-                    } else {
-                        "${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}"
-                    }
-                    val textColor = if (record.userName.isNotBlank()) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                    Text(displayText, style = MaterialTheme.typography.bodySmall, color = textColor)
-                }
-                // Кнопка редактирования наименования
+            // 1. Верхний блок: Информация
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(2.dp))
+                val displayText = if (record.userName.isNotBlank()) record.userName else "${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}"
+                val textColor = if (record.userName.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                Text(displayText, style = MaterialTheme.typography.bodySmall, color = textColor)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // 2. Центральный блок: Карандаш и количество (справа)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { showEditDialog = true }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Изменить наименование", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Edit, contentDescription = "Изменить", tint = MaterialTheme.colorScheme.primary)
                 }
                 IconButton(onClick = { if (record.quantity > 1) onQuantityChange(record.quantity - 1) }, modifier = Modifier.size(36.dp)) {
                     Text("−", fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -293,6 +285,9 @@ fun ScanRecordCard(
                     Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 }
             }
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // 3. Нижний блок: Крестик (слева)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
                 IconButton(onClick = onDelete) {
                     Icon(Icons.Default.Clear, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))

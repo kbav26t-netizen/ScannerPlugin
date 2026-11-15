@@ -53,7 +53,12 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun updateUserNameByBarcode(barcode: String, userName: String) {
-        viewModelScope.launch { scanDao.updateUserNameByBarcode(barcode, userName) }
+        viewModelScope.launch {
+            val list = scanDao.getByBarcode(barcode)
+            list.forEach { scan ->
+                scanDao.update(scan.copy(userName = userName))
+            }
+        }
     }
 
     fun deleteScan(id: Long) {
@@ -64,7 +69,6 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { scanDao.clearAll() }
     }
 
-    // Заглушки для будущего Этапа 3 (распознавание)
     fun startCounting(productId: Long, productName: String) {}
     fun addPoint(x: Float, y: Float) {}
     fun addProduct(name: String, category: String, photos: List<Pair<FloatArray, String>>) {}

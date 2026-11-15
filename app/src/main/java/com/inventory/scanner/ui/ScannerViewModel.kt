@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class CountPoint(val x: Float, val y: Float)
+
 class ScannerViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application.applicationContext
     private val db = ScanDatabase.getInstance(application)

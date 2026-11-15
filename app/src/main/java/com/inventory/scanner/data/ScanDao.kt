@@ -14,25 +14,6 @@ interface ScanDao {
     @Query("SELECT * FROM scans ORDER BY timestamp DESC")
     fun getAll(): Flow<List<ScanEntity>>
 
-    @Query("SELECT * FROM scans
-cd ~/ScannerPlugin
-cat > app/src/main/java/com/inventory/scanner/data/ScanDao.kt << 'EOF'
-package com.inventory.scanner.data
-
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.Query
-import androidx.room.Update
-import kotlinx.coroutines.flow.Flow
-
-@Dao
-interface ScanDao {
-    @Insert
-    suspend fun insert(scan: ScanEntity)
-
-    @Query("SELECT * FROM scans ORDER BY timestamp DESC")
-    fun getAll(): Flow<List<ScanEntity>>
-
     @Query("SELECT * FROM scans ORDER BY timestamp DESC")
     fun getAllSync(): List<ScanEntity>
 
@@ -50,7 +31,4 @@ interface ScanDao {
 
     @Query("UPDATE scans SET quantity = :quantity WHERE id = :id")
     suspend fun updateQuantity(id: Long, quantity: Int)
-
-    @Query("UPDATE scans SET userName = :userName WHERE id = :id")
-    suspend fun updateUserName(id: Long, userName: String)
 }

@@ -44,7 +44,8 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
     fun addScan(value: String, format: String) {
         viewModelScope.launch {
-            scanDao.insert(ScanEntity(value = value, format = format))
+            val existing = scanDao.getByBarcode(value).firstOrNull { it.userName.isNotBlank() }
+            scanDao.insert(ScanEntity(value = value, format = format, userName = existing?.userName ?: ""))
         }
     }
 

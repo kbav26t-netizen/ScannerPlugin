@@ -1,10 +1,9 @@
 package com.inventory.scanner.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.inventory.scanner.data.CountEntity
-import com.inventory.scanner.data.ProductEntity
 import com.inventory.scanner.data.ScanDatabase
 import com.inventory.scanner.data.ScanEntity
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,40 +11,33 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class CountPoint(val x: Float, val y: Float)
-
 class ScannerViewModel(application: Application) : AndroidViewModel(application) {
-
+    private val context = application.applicationContext
     private val db = ScanDatabase.getInstance(application)
-    val productDao = db.productDao()
-    val countDao = db.countDao()
     private val scanDao = db.scanDao()
 
     private val _scans = MutableStateFlow<List<ScanEntity>>(emptyList())
     val scans: StateFlow<List<ScanEntity>> = _scans.asStateFlow()
 
-    private val _products = MutableStateFlow<List<ProductEntity>>(emptyList())
-    val products: StateFlow<List<ProductEntity>> = _products.asStateFlow()
-
-    private val _counts = MutableStateFlow<List<CountEntity>>(emptyList())
-    val counts: StateFlow<List<CountEntity>> = _counts.asStateFlow()
-
     init {
-        viewModelScope.launch {
-            scanDao.getAll().collect { list -> _scans.value = list }
-        }
-        viewModelScope.launch {
-            productDao.allProducts().collect { list -> _products.value = list }
-        }
-        viewModelScope.launch {
-            countDao.getAll().collect { list -> _counts.value = list }
-        }
+        viewModelScope.launch { scanDao.getAll().collect { list -> _scans.value = list } }
     }
 
     fun addScan(value: String, format: String) {
         viewModelScope.launch {
-            val existing = scanDao.getByBarcode(value).firstOrNull { it.userName.isNotBlank() }
-            scanDao.insert(ScanEntity(value = value, format = format, userName = existing?.userName ?: ""))
+            var name = scanDao.getByBarcode(value).firstOrNull { it.userName.isNotBlank() }?.userName ?: ""
+            if (name.isBlank()) {
+                try {
+                    val uri = Uri.parse("content://com.inventory.hub.provider/products")
+                    val cursor = context.contentResolver.query(uri, null, "barcode=?", arrayOf(value), null)
+                    cursor?.use {
+                        if (it.moveToFirst()) {
+                            name = it.getString(it.getColumnIndexOrThrow("name"))
+                        }
+                    }
+                } catch (e: Exception) {}
+            }
+            scanDao.insert(ScanEntity(value = value, format = format, userName = name))
         }
     }
 
@@ -56,21 +48,10 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     fun updateUserNameByBarcode(barcode: String, userName: String) {
         viewModelScope.launch {
             val list = scanDao.getByBarcode(barcode)
-            list.forEach { scan ->
-                scanDao.update(scan.copy(userName = userName))
-            }
+            list.forEach { scan -> scanDao.update(scan.copy(userName = userName)) }
         }
     }
 
-    fun deleteScan(id: Long) {
-        viewModelScope.launch { scanDao.delete(id) }
-    }
-
-    fun clearAllScans() {
-        viewModelScope.launch { scanDao.clearAll() }
-    }
-
-    fun startCounting(productId: Long, productName: String) {}
-    fun addPoint(x: Float, y: Float) {}
-    fun addProduct(name: String, category: String, photos: List<Pair<FloatArray, String>>) {}
+    fun deleteScan(id: Long) { viewModelScope.launch { scanDao.delete(id) } }
+    fun clearAllScans() { viewModelScope.launch { scanDao.clearAll() } }
 }

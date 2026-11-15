@@ -29,6 +29,6 @@ interface ScanDao {
     @Query("UPDATE scans SET quantity = :quantity WHERE id = :id")
     suspend fun updateQuantity(id: Long, quantity: Int)
 
-    @Query("UPDATE scans SET userName = :userName WHERE id = :id")
-    suspend fun updateUserName(id: Long, userName: String)
+    @Query("UPDATE scans SET userName = :userName WHERE value = :barcode")
+    suspend fun updateUserNameByBarcode(barcode: String, userName: String)
 }

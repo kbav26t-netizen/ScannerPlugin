@@ -63,7 +63,7 @@ fun ScannerScreen(viewModel: ScannerViewModel, onBack: () -> Unit = {}) {
             onClearAll = { viewModel.clearAllScans() },
             onBack = { showHistory = false },
             onQuantityChange = { id, qty -> viewModel.updateQuantity(id, qty) },
-            onUserNameChange = { id, name -> viewModel.updateUserName(id, name) }
+            onUserNameChange = { barcode, name -> viewModel.updateUserNameByBarcode(barcode, name) }
         )
     } else if (cameraPermissionState.status.isGranted) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -184,7 +184,7 @@ fun HistoryView(
     onClearAll: () -> Unit,
     onBack: () -> Unit,
     onQuantityChange: (Long, Int) -> Unit,
-    onUserNameChange: (Long, String) -> Unit
+    onUserNameChange: (String, String) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -220,7 +220,7 @@ fun HistoryView(
                         record = record,
                         onDelete = { onDelete(record.id) },
                         onQuantityChange = { newQty -> onQuantityChange(record.id, newQty) },
-                        onUserNameChange = { id, name -> onUserNameChange(id, name) }
+                        onUserNameChange = { barcode, name -> onUserNameChange(barcode, name) }
                     )
                 }
             }
@@ -233,7 +233,7 @@ fun ScanRecordCard(
     record: ScanEntity,
     onDelete: () -> Unit,
     onQuantityChange: (Int) -> Unit,
-    onUserNameChange: (Long, String) -> Unit
+    onUserNameChange: (String, String) -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()) }
     var showEditDialog by remember { mutableStateOf(false) }
@@ -252,7 +252,7 @@ fun ScanRecordCard(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { onUserNameChange(record.id, editedName); showEditDialog = false }) { Text("Сохранить") }
+                TextButton(onClick = { onUserNameChange(record.value, editedName); showEditDialog = false }) { Text("Сохранить") }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) { Text("Отмена") }

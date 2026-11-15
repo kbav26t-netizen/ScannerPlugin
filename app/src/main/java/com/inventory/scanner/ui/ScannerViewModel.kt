@@ -52,8 +52,8 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { scanDao.updateQuantity(id, quantity) }
     }
 
-    fun updateUserName(id: Long, userName: String) {
-        viewModelScope.launch { scanDao.updateUserName(id, userName) }
+    fun updateUserNameByBarcode(barcode: String, userName: String) {
+        viewModelScope.launch { scanDao.updateUserNameByBarcode(barcode, userName) }
     }
 
     fun deleteScan(id: Long) {

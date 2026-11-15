@@ -262,35 +262,36 @@ fun ScanRecordCard(
 
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-            // 1. Верхний блок: Информация
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(2.dp))
+            // Строка 1: Штрихкод + карандаш (редактировать)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(record.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                IconButton(onClick = { showEditDialog = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Edit, contentDescription = "Изменить наименование", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+            
+            // Строка 2: Наименование + управление количеством
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 val displayText = if (record.userName.isNotBlank()) record.userName else "${record.format} • ${dateFormat.format(java.util.Date(record.timestamp))}"
                 val textColor = if (record.userName.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                Text(displayText, style = MaterialTheme.typography.bodySmall, color = textColor)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // 2. Центральный блок: Карандаш и количество (справа)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { showEditDialog = true }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Изменить", tint = MaterialTheme.colorScheme.primary)
-                }
-                IconButton(onClick = { if (record.quantity > 1) onQuantityChange(record.quantity - 1) }, modifier = Modifier.size(36.dp)) {
-                    Text("−", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                }
-                Text("${record.quantity}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(32.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                IconButton(onClick = { onQuantityChange(record.quantity + 1) }, modifier = Modifier.size(36.dp)) {
-                    Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(displayText, style = MaterialTheme.typography.bodyMedium, color = textColor, modifier = Modifier.weight(1f))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { if (record.quantity > 1) onQuantityChange(record.quantity - 1) }, modifier = Modifier.size(36.dp)) {
+                        Text("−", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text("${record.quantity}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(32.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    IconButton(onClick = { onQuantityChange(record.quantity + 1) }, modifier = Modifier.size(36.dp)) {
+                        Text("+", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
             
-            // 3. Нижний блок: Крестик (слева)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Clear, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+            // Строка 3: Артикул (пока прочерк) + крестик (удалить)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("—", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Clear, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
